@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors
+ * Copyright (C) 2018 Velocity Contributors & TropicalShadow
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.api.util.ProxyVersion;
 import com.velocitypowered.proxy.command.VelocityCommandManager;
 import com.velocitypowered.proxy.command.builtin.GlistCommand;
+import com.velocitypowered.proxy.command.builtin.SendCommand;
 import com.velocitypowered.proxy.command.builtin.ServerCommand;
 import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
 import com.velocitypowered.proxy.command.builtin.VelocityCommand;
@@ -171,13 +172,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     String implVersion;
     String implVendor;
     if (pkg != null) {
-      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "Velocity");
+      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "TesseractProxy");
       implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
-      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors");
+      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "TesseractHosting");
     } else {
-      implName = "Velocity";
+      implName = "TesseractProxy";
       implVersion = "<unknown>";
-      implVendor = "Velocity Contributors";
+      implVendor = "TesseractHosting";
     }
 
     return new ProxyVersion(implName, implVendor, implVersion);
@@ -209,6 +210,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     commandManager.register("server", new ServerCommand(this));
     commandManager.register("shutdown", ShutdownCommand.command(this),
         "end", "stop");
+    commandManager.register("send", new SendCommand(this));
     new GlistCommand(this).register();
 
     this.doStartupConfigLoad();

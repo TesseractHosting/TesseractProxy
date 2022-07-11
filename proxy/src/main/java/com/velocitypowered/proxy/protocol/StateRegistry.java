@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors
+ * Copyright (C) 2018 Velocity Contributors & TropicalShadow
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -461,7 +461,12 @@ public enum StateRegistry {
        * @throws IllegalArgumentException if the packet ID is not found
        */
       public int getPacketId(final MinecraftPacket packet) {
-        final int id = this.packetClassToId.getInt(packet.getClass());
+        int id;
+        if (packet instanceof CustomPacket) {
+          id = ((CustomPacket) packet).packetId(this.version);
+        } else {
+          id = this.packetClassToId.getInt(packet.getClass());
+        }
         if (id == Integer.MIN_VALUE) {
           throw new IllegalArgumentException(String.format(
               "Unable to find id for packet of type %s in %s protocol %s",
