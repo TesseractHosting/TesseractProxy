@@ -40,39 +40,27 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextComponent.Builder;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-public class LobbyCommand implements SimpleCommand {
-    public static final int MAX_SERVERS_TO_LIST = 50;
+public class BuilderCommand implements SimpleCommand {
     private final ProxyServer server;
-    private final String LobbyServer = "bridgesplashhub";
+    private static final String BuilderServer = "bridgesplashbuilder";
 
-    public LobbyCommand(ProxyServer server) {
+    public BuilderCommand(ProxyServer server) {
         this.server = server;
     }
 
     @Override
     public void execute(Invocation invocation) {
-        CommandSource source = invocation.source();
+        Player source = (Player)invocation.source();
         String[] args = invocation.arguments();
-        Player player = (Player) source;
-        Optional<RegisteredServer> toConnect = this.server.getServer(LobbyServer);
-        RegisteredServer server;
-        if (toConnect.isEmpty()) {
-            toConnect = this.server.getServer("limbo");
-            if(toConnect.isEmpty()){
-                player.sendMessage(
-                        Identity.nil(),
-                        CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(LobbyServer)));
-                return;
-            }
-
+        Optional<RegisteredServer> toConnect = this.server.getServer(BuilderServer);
+        if(toConnect.isEmpty()){
+            source.sendMessage(Component.text("Builder server is not online."));
+            return;
         }
-        server = toConnect.get();
-
-
-
-        player.createConnectionRequest((RegisteredServer) toConnect.get()).fireAndForget();
-        player.sendMessage(Component.text("Sent to hub"));
+        source.createConnectionRequest((RegisteredServer) toConnect.get()).fireAndForget();
+        source.sendMessage(Component.text("Connecting to builder server..."));
     }
+
     @Override
     public List<String> suggest(Invocation invocation) {
         return new ArrayList<String>();
@@ -80,7 +68,6 @@ public class LobbyCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return true;
+        return ((invocation.source().getPermissionValue("velocity.command.builder") != Tristate.FALSE) && (invocation.source() instanceof Player));
     }
-
 }

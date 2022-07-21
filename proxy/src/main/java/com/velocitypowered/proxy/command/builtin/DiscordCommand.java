@@ -40,39 +40,19 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextComponent.Builder;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-public class LobbyCommand implements SimpleCommand {
-    public static final int MAX_SERVERS_TO_LIST = 50;
+public class DiscordCommand implements SimpleCommand {
     private final ProxyServer server;
-    private final String LobbyServer = "bridgesplashhub";
 
-    public LobbyCommand(ProxyServer server) {
+    public DiscordCommand(ProxyServer server) {
         this.server = server;
     }
 
     @Override
     public void execute(Invocation invocation) {
-        CommandSource source = invocation.source();
-        String[] args = invocation.arguments();
-        Player player = (Player) source;
-        Optional<RegisteredServer> toConnect = this.server.getServer(LobbyServer);
-        RegisteredServer server;
-        if (toConnect.isEmpty()) {
-            toConnect = this.server.getServer("limbo");
-            if(toConnect.isEmpty()){
-                player.sendMessage(
-                        Identity.nil(),
-                        CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(LobbyServer)));
-                return;
-            }
-
-        }
-        server = toConnect.get();
-
-
-
-        player.createConnectionRequest((RegisteredServer) toConnect.get()).fireAndForget();
-        player.sendMessage(Component.text("Sent to hub"));
+        CommandSource executor = invocation.source();
+        executor.sendMessage(Component.text("Discord: https://discord.bridgesplash.net/"));
     }
+
     @Override
     public List<String> suggest(Invocation invocation) {
         return new ArrayList<String>();
@@ -82,5 +62,4 @@ public class LobbyCommand implements SimpleCommand {
     public boolean hasPermission(Invocation invocation) {
         return true;
     }
-
 }

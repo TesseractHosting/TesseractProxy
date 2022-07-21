@@ -37,7 +37,10 @@ import com.velocitypowered.api.util.Favicon;
 import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.api.util.ProxyVersion;
 import com.velocitypowered.proxy.command.VelocityCommandManager;
+import com.velocitypowered.proxy.command.builtin.BuilderCommand;
+import com.velocitypowered.proxy.command.builtin.DiscordCommand;
 import com.velocitypowered.proxy.command.builtin.GlistCommand;
+import com.velocitypowered.proxy.command.builtin.LobbyCommand;
 import com.velocitypowered.proxy.command.builtin.SendCommand;
 import com.velocitypowered.proxy.command.builtin.ServerCommand;
 import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
@@ -214,6 +217,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     commandManager.register("shutdown", ShutdownCommand.command(this),
         "end", "stop");
     commandManager.register("send", new SendCommand(this));
+    commandManager.register("hub", new LobbyCommand(this));
+    commandManager.register("builder", new BuilderCommand(this));
+    commandManager.register("discord", new DiscordCommand(this));
     new GlistCommand(this).register();
 
     this.doStartupConfigLoad();

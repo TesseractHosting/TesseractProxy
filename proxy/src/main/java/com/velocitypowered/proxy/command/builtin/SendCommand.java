@@ -52,7 +52,7 @@ public class SendCommand implements SimpleCommand {
   public void execute(Invocation invocation) {
     CommandSource source = invocation.source();
     String[] args = invocation.arguments();
-    Player player = (Player) source;
+    //Player player = (Player) source;
     if (args.length >= 2) {
       String playerNameOrAll = args[0];
       Optional<Player> selectedPlayer = this.server.getPlayer(playerNameOrAll);
@@ -65,7 +65,7 @@ public class SendCommand implements SimpleCommand {
         selected.add(selectedPlayer.get());
       } else {
         if (!all) {
-          player.sendMessage(
+          source.sendMessage(
                   Identity.nil(),
                   CommandMessages.UNKNOWN_PLAYER.args(Component.text(playerNameOrAll)));
           return;
@@ -75,7 +75,7 @@ public class SendCommand implements SimpleCommand {
       }
 
       if (toConnect.isEmpty()) {
-        player.sendMessage(
+        source.sendMessage(
                 Identity.nil(),
                 CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(serverName)));
         return;
@@ -87,22 +87,24 @@ public class SendCommand implements SimpleCommand {
                 .args(Component.text(toConnect.get().getServerInfo().getName())));
       });
     } else {
-      this.outputServerInformation(player);
+      this.outputServerInformation(source);
     }
 
   }
 
-  private void outputServerInformation(Player executor) {
-    String currentServer = executor.getCurrentServer()
-            .map(ServerConnection::getServerInfo)
-            .map(ServerInfo::getName)
-            .orElse("<unknown>");
-    executor.sendMessage(
-            Identity.nil(),
-            Component.translatable(
-                    "velocity.command.server-current-server",
-                    NamedTextColor.YELLOW,
-                    Component.text(currentServer)));
+  private void outputServerInformation(CommandSource executor) {
+    if(executor instanceof Player){
+      String currentServer = ((Player)executor).getCurrentServer()
+              .map(ServerConnection::getServerInfo)
+              .map(ServerInfo::getName)
+              .orElse("<unknown>");
+      executor.sendMessage(
+              Identity.nil(),
+              Component.translatable(
+                      "velocity.command.server-current-server",
+                      NamedTextColor.YELLOW,
+                      Component.text(currentServer)));
+    }
     List<RegisteredServer> servers = BuiltinCommandUtil.sortedServerList(this.server);
     if (servers.size() > MAX_SERVERS_TO_LIST) {
       executor.sendMessage(
