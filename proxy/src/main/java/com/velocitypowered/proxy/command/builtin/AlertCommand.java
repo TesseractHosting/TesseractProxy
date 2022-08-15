@@ -50,9 +50,9 @@ public class AlertCommand implements SimpleCommand {
     @Override
     public void execute(Invocation invocation) {
         server.getAllPlayers().forEach(player -> {
-            player.sendMessage(Component.text("Alert: ", NamedTextColor.RED).append(Component.text(String.join(" ", invocation.arguments()))));
+            player.sendMessage(Component.text("Alert: ", NamedTextColor.RED).append(Component.text(String.join(" ", invocation.arguments()), NamedTextColor.WHITE)));
         });
-        server.getConsoleCommandSource().sendMessage(Component.text("Alert: ", NamedTextColor.RED).append(Component.text(String.join(" ", invocation.arguments()))));
+        server.getConsoleCommandSource().sendMessage(Component.text("Alert: ", NamedTextColor.RED).append(Component.text(String.join(" ", invocation.arguments()), NamedTextColor.WHITE)));
     }
 
     @Override
