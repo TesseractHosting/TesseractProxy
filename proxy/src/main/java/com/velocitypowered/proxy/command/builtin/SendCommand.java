@@ -155,7 +155,7 @@ public class SendCommand implements SimpleCommand {
 
   @Override
   public boolean hasPermission(Invocation invocation) {
-    return invocation.source().getPermissionValue("velocity.command.send") != Tristate.FALSE;
+    return invocation.source().getPermissionValue("velocity.command.send") == Tristate.TRUE;
   }
 
 }

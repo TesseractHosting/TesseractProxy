@@ -68,6 +68,6 @@ public class BuilderCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return ((invocation.source().getPermissionValue("velocity.command.builder") != Tristate.FALSE) && (invocation.source() instanceof Player));
+        return ((invocation.source().getPermissionValue("velocity.command.builder") == Tristate.TRUE) && (invocation.source() instanceof Player));
     }
 }

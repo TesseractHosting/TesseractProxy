@@ -62,6 +62,6 @@ public class AlertCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return invocation.source().getPermissionValue("velocity.command.alert") != Tristate.FALSE;
+        return invocation.source().getPermissionValue("velocity.command.alert") == Tristate.TRUE;
     }
 }
