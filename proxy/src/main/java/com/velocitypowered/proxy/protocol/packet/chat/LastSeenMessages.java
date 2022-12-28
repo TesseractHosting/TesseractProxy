@@ -17,39 +17,35 @@
 
 package com.velocitypowered.proxy.protocol.packet.chat;
 
-import com.velocitypowered.api.network.ProtocolVersion;
-import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
-import com.velocitypowered.proxy.protocol.MinecraftPacket;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
 import io.netty.buffer.ByteBuf;
+import java.util.Arrays;
+import java.util.BitSet;
 
-public class PlayerChatPreview implements MinecraftPacket {
+public class LastSeenMessages {
+  private static final int DIV_FLOOR = -Math.floorDiv(-20, 8);
+  private int offset;
+  private BitSet acknowledged;
 
-  private int id;
-  private String query;
-
-  public int getId() {
-    return id;
+  public LastSeenMessages() {
+    this.offset = 0;
+    this.acknowledged = new BitSet();
   }
 
-  public String getQuery() {
-    return query;
+  public LastSeenMessages(ByteBuf buf) {
+    this.offset = ProtocolUtils.readVarInt(buf);
+
+    byte[] bytes = new byte[DIV_FLOOR];
+    buf.readBytes(bytes);
+    this.acknowledged = BitSet.valueOf(bytes);
   }
 
-  @Override
-  public void decode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
-    id = buf.readInt();
-    query = ProtocolUtils.readString(buf, 256);
+  public void encode(ByteBuf buf) {
+    ProtocolUtils.writeVarInt(buf, offset);
+    buf.writeBytes(Arrays.copyOf(acknowledged.toByteArray(), DIV_FLOOR));
   }
 
-  @Override
-  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
-    buf.writeInt(id);
-    ProtocolUtils.writeString(buf, query);
-  }
-
-  @Override
-  public boolean handle(MinecraftSessionHandler handler) {
-    return handler.handle(this);
+  public boolean isEmpty() {
+    return acknowledged.isEmpty();
   }
 }

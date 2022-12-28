@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2018 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.velocitypowered.proxy.connection;
+package com.velocitypowered.proxy.protocol.packet.chat;
 
-public class VelocityConstants {
+import com.velocitypowered.proxy.protocol.MinecraftPacket;
 
-  private VelocityConstants() {
-    throw new AssertionError();
+public interface ChatHandler<T extends MinecraftPacket> {
+  Class<T> packetClass();
+
+  void handlePlayerChatInternal(T packet);
+
+  default boolean handlePlayerChat(MinecraftPacket packet) {
+    if (packetClass().isInstance(packet)) {
+      handlePlayerChatInternal(packetClass().cast(packet));
+      return true;
+    }
+    return false;
   }
-
-  public static final String VELOCITY_IP_FORWARDING_CHANNEL = "velocity:player_info";
-  public static final int MODERN_FORWARDING_DEFAULT = 1;
-  public static final int MODERN_FORWARDING_WITH_KEY = 2;
-  public static final int MODERN_FORWARDING_WITH_KEY_V2 = 3;
-  public static final int MODERN_LAZY_SESSION = 4;
-  public static final int MODERN_FORWARDING_MAX_VERSION = MODERN_LAZY_SESSION;
-
-  public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 }

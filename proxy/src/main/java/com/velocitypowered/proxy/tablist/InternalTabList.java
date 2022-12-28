@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2018 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.velocitypowered.proxy.connection;
+package com.velocitypowered.proxy.tablist;
 
-public class VelocityConstants {
+import com.velocitypowered.api.proxy.player.TabList;
+import com.velocitypowered.proxy.protocol.packet.LegacyPlayerListItem;
+import com.velocitypowered.proxy.protocol.packet.RemovePlayerInfo;
+import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfo;
 
-  private VelocityConstants() {
-    throw new AssertionError();
+public interface InternalTabList extends TabList {
+  default void processLegacy(LegacyPlayerListItem packet) {
   }
 
-  public static final String VELOCITY_IP_FORWARDING_CHANNEL = "velocity:player_info";
-  public static final int MODERN_FORWARDING_DEFAULT = 1;
-  public static final int MODERN_FORWARDING_WITH_KEY = 2;
-  public static final int MODERN_FORWARDING_WITH_KEY_V2 = 3;
-  public static final int MODERN_LAZY_SESSION = 4;
-  public static final int MODERN_FORWARDING_MAX_VERSION = MODERN_LAZY_SESSION;
+  default void processUpdate(UpsertPlayerInfo infoPacket) {
+  }
 
-  public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
+  default void processRemove(RemovePlayerInfo infoPacket) {
+  }
 }
