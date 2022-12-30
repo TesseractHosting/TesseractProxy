@@ -19,6 +19,20 @@ import java.util.Optional;
 public interface ProxyConfig {
 
   /**
+   * Registered name for the hub server
+   *
+   * @return the hub server name
+   */
+  String getHubServer();
+
+  /**
+   * Registered name for the builder server
+   *
+   * @return the builder server name
+   */
+    String getBuilderServer();
+
+  /**
    * Whether GameSpy 4 queries are accepted by the proxy.
    *
    * @return queries enabled

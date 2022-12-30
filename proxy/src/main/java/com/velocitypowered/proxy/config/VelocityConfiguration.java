@@ -29,6 +29,13 @@ import com.velocitypowered.api.proxy.config.ProxyConfig;
 import com.velocitypowered.api.util.Favicon;
 import com.velocitypowered.proxy.util.AddressUtil;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,18 +46,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.*;
 
 public class VelocityConfiguration implements ProxyConfig {
 
@@ -58,6 +54,8 @@ public class VelocityConfiguration implements ProxyConfig {
 
   @Expose private String bind = "0.0.0.0:25577";
   @Expose private String motd = "&3A Velocity Server";
+  @Expose private String hubServer = "hub";
+  @Expose private String builderServer = "builder";
   @Expose private int showMaxPlayers = 500;
   @Expose private boolean onlineMode = true;
   @Expose private boolean preventClientProxyConnections = false;
@@ -85,12 +83,14 @@ public class VelocityConfiguration implements ProxyConfig {
     this.metrics = metrics;
   }
 
-  private VelocityConfiguration(String bind, String motd, int showMaxPlayers, boolean onlineMode,
+  private VelocityConfiguration(String hubServer, String builderServer,String bind, String motd, int showMaxPlayers, boolean onlineMode,
       boolean preventClientProxyConnections, boolean announceForge,
       PlayerInfoForwarding playerInfoForwardingMode, byte[] forwardingSecret,
       boolean onlineModeKickExistingPlayers, PingPassthroughMode pingPassthrough,
       boolean enablePlayerAddressLogging, Servers servers, ForcedHosts forcedHosts,
       Advanced advanced, Query query, Metrics metrics, boolean forceKeyAuthentication) {
+    this.hubServer = hubServer;
+    this.builderServer = builderServer;;
     this.bind = bind;
     this.motd = motd;
     this.showMaxPlayers = showMaxPlayers;
@@ -229,8 +229,20 @@ public class VelocityConfiguration implements ProxyConfig {
     }
   }
 
+
+
   public InetSocketAddress getBind() {
     return AddressUtil.parseAndResolveAddress(bind);
+  }
+
+  @Override
+  public String getHubServer(){
+    return hubServer;
+  }
+
+  @Override
+  public String getBuilderServer(){
+      return builderServer;
   }
 
   @Override
@@ -528,6 +540,8 @@ public class VelocityConfiguration implements ProxyConfig {
 
     String bind = config.getOrElse("bind", "0.0.0.0:25577");
     String motd = config.getOrElse("motd", "&#09add3A Velocity Server");
+    String hubServer = config.getOrElse("hub-server", "hub");
+    String builderServer = config.getOrElse("builder-server", "builder");
     int maxPlayers = config.getIntOrElse("show-max-players", 500);
     Boolean onlineMode = config.getOrElse("online-mode", true);
     Boolean forceKeyAuthentication = config.getOrElse("force-key-authentication", true);
@@ -546,6 +560,8 @@ public class VelocityConfiguration implements ProxyConfig {
     }
 
     return new VelocityConfiguration(
+        hubServer,
+        builderServer,
         bind,
         motd,
         maxPlayers,

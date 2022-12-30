@@ -17,32 +17,21 @@
 
 package com.velocitypowered.proxy.command.builtin;
 
-import com.google.common.collect.ImmutableList;
-import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import com.velocitypowered.api.proxy.server.ServerInfo;
+import net.kyori.adventure.identity.Identity;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import net.kyori.adventure.identity.Identity;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.TextComponent.Builder;
-import net.kyori.adventure.text.format.NamedTextColor;
 
 public class BuilderCommand implements SimpleCommand {
     private final ProxyServer server;
-    private static final String BuilderServer = "bridgesplashbuilder";
 
     public BuilderCommand(ProxyServer server) {
         this.server = server;
@@ -52,13 +41,24 @@ public class BuilderCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         Player source = (Player)invocation.source();
         String[] args = invocation.arguments();
-        Optional<RegisteredServer> toConnect = this.server.getServer(BuilderServer);
+        String builderServer = this.server.getConfiguration().getBuilderServer();
+        Optional<RegisteredServer> toConnect = this.server.getServer(builderServer);
         if(toConnect.isEmpty()){
-            source.sendMessage(Component.text("Builder server is not online."));
+            source.sendMessage(Component.text("Builder server is not online.",NamedTextColor.RED));
             return;
         }
-        source.createConnectionRequest((RegisteredServer) toConnect.get()).fireAndForget();
+
         source.sendMessage(Component.text("Connecting to builder server..."));
+        source.createConnectionRequest(toConnect.get())
+                .connectWithIndication().thenAccept( result ->{
+                    if(result){
+                        source.sendMessage(Identity.nil(), Component.translatable(
+                                "velocity.command.server-current-server",
+                                NamedTextColor.YELLOW,
+                                Component.text(builderServer)));
+                    }
+                })
+        ;
     }
 
     @Override

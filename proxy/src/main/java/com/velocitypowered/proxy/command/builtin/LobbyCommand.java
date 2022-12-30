@@ -17,33 +17,21 @@
 
 package com.velocitypowered.proxy.command.builtin;
 
-import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
-import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import com.velocitypowered.api.proxy.server.ServerInfo;
+import net.kyori.adventure.identity.Identity;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import net.kyori.adventure.identity.Identity;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.TextComponent.Builder;
-import net.kyori.adventure.text.format.NamedTextColor;
 
 public class LobbyCommand implements SimpleCommand {
-    public static final int MAX_SERVERS_TO_LIST = 50;
     private final ProxyServer server;
-    private final String LobbyServer = "bridgesplashhub";
 
     public LobbyCommand(ProxyServer server) {
         this.server = server;
@@ -54,24 +42,31 @@ public class LobbyCommand implements SimpleCommand {
         CommandSource source = invocation.source();
         String[] args = invocation.arguments();
         Player player = (Player) source;
-        Optional<RegisteredServer> toConnect = this.server.getServer(LobbyServer);
+        String lobbyServer = server.getConfiguration().getHubServer();
+        Optional<RegisteredServer> toConnect = this.server.getServer(lobbyServer);
         RegisteredServer server;
         if (toConnect.isEmpty()) {
             toConnect = this.server.getServer("limbo");
             if(toConnect.isEmpty()){
                 player.sendMessage(
                         Identity.nil(),
-                        CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(LobbyServer)));
+                        Component.text("Hub server is not online.",NamedTextColor.RED)
+                        );
                 return;
             }
 
         }
         server = toConnect.get();
 
-
-
-        player.createConnectionRequest((RegisteredServer) toConnect.get()).fireAndForget();
-        player.sendMessage(Component.text("Sent to hub"));
+        player.createConnectionRequest(server)
+                .connectWithIndication().thenAccept(result -> {
+                    if(result) {
+                        player.sendMessage(Identity.nil(), Component.translatable(
+                                "velocity.command.server-current-server",
+                                NamedTextColor.YELLOW,
+                                Component.text(lobbyServer)));
+                    }
+                });
     }
     @Override
     public List<String> suggest(Invocation invocation) {
