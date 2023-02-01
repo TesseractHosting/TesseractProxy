@@ -26,19 +26,16 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
+import net.kyori.adventure.identity.Identity;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import net.kyori.adventure.identity.Identity;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.TextComponent.Builder;
-import net.kyori.adventure.text.format.NamedTextColor;
 
 public class SendCommand implements SimpleCommand {
   public static final int MAX_SERVERS_TO_LIST = 50;
@@ -131,10 +128,8 @@ public class SendCommand implements SimpleCommand {
 
   @Override
   public List<String> suggest(Invocation invocation) {
-    String[] currentArgs = (String[]) invocation.arguments();
-    List<String> playerList = new ArrayList(this.server.getAllPlayers().stream().map((player) -> {
-      return player.getGameProfile().getName();
-    }).toList());
+    String[] currentArgs = invocation.arguments();
+    List<String> playerList = this.server.getAllPlayers().stream().map((player) -> player.getGameProfile().getName()).collect(Collectors.toList());
     playerList.add("all");
     Stream<String> possibilities = playerList.stream();
     Stream<String> possibleServers = this.server.getAllServers().stream().map((rs) -> {
@@ -143,13 +138,9 @@ public class SendCommand implements SimpleCommand {
     if (currentArgs.length == 0) {
       return possibilities.collect(Collectors.toList());
     } else if (currentArgs.length == 1) {
-      return (List) possibilities.filter((name) -> {
-        return name.regionMatches(true, 0, currentArgs[0], 0, currentArgs[0].length());
-      }).collect(Collectors.toList());
+      return (List<String>) possibilities.filter((name) -> name.regionMatches(true, 0, currentArgs[0], 0, currentArgs[0].length())).collect(Collectors.toList());
     } else {
-      return (List) (currentArgs.length == 2 ? (List) possibleServers.filter((name) -> {
-        return name.regionMatches(true, 0, currentArgs[1], 0, currentArgs[1].length());
-      }).collect(Collectors.toList()) : ImmutableList.of());
+      return (List<String>) (currentArgs.length == 2 ? (List) possibleServers.filter((name) -> name.regionMatches(true, 0, currentArgs[1], 0, currentArgs[1].length())).collect(Collectors.toList()) : ImmutableList.of());
     }
   }
 

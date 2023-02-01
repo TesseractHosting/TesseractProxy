@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2018 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,13 +29,6 @@ import com.velocitypowered.api.proxy.config.ProxyConfig;
 import com.velocitypowered.api.util.Favicon;
 import com.velocitypowered.proxy.util.AddressUtil;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,33 +39,62 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * Velocity's configuration.
+ */
 public class VelocityConfiguration implements ProxyConfig {
 
   private static final Logger logger = LogManager.getLogger(VelocityConfiguration.class);
 
-  @Expose private String bind = "0.0.0.0:25577";
-  @Expose private String motd = "&3A Velocity Server";
-  @Expose private String hubServer = "hub";
-  @Expose private String builderServer = "builder";
-  @Expose private int showMaxPlayers = 500;
-  @Expose private boolean onlineMode = true;
-  @Expose private boolean preventClientProxyConnections = false;
-  @Expose private PlayerInfoForwarding playerInfoForwardingMode = PlayerInfoForwarding.NONE;
+  @Expose
+  private String bind = "0.0.0.0:25577";
+  @Expose
+  private String motd = "&3A Velocity Server";
+  @Expose
+  private String hubServer = "hub";
+  @Expose
+  private String builderServer = "builder";
+  @Expose
+  private int showMaxPlayers = 500;
+  @Expose
+  private boolean onlineMode = true;
+  @Expose
+  private boolean preventClientProxyConnections = false;
+  @Expose
+  private PlayerInfoForwarding playerInfoForwardingMode = PlayerInfoForwarding.NONE;
   private byte[] forwardingSecret = generateRandomString(12).getBytes(StandardCharsets.UTF_8);
-  @Expose private boolean announceForge = false;
-  @Expose private boolean onlineModeKickExistingPlayers = false;
-  @Expose private PingPassthroughMode pingPassthrough = PingPassthroughMode.DISABLED;
+  @Expose
+  private boolean announceForge = false;
+  @Expose
+  private boolean onlineModeKickExistingPlayers = false;
+  @Expose
+  private PingPassthroughMode pingPassthrough = PingPassthroughMode.DISABLED;
   private final Servers servers;
   private final ForcedHosts forcedHosts;
-  @Expose private final Advanced advanced;
-  @Expose private final Query query;
+  @Expose
+  private final Advanced advanced;
+  @Expose
+  private final Query query;
   private final Metrics metrics;
-  @Expose private boolean enablePlayerAddressLogging = true;
+  @Expose
+  private boolean enablePlayerAddressLogging = true;
   private net.kyori.adventure.text.@MonotonicNonNull Component motdAsComponent;
   private @Nullable Favicon favicon;
-  @Expose private boolean forceKeyAuthentication = true; // Added in 1.19
+  @Expose
+  private boolean forceKeyAuthentication = true; // Added in 1.19
 
   private VelocityConfiguration(Servers servers, ForcedHosts forcedHosts, Advanced advanced,
       Query query, Metrics metrics) {
@@ -112,6 +134,7 @@ public class VelocityConfiguration implements ProxyConfig {
 
   /**
    * Attempts to validate the configuration.
+   *
    * @return {@code true} if the configuration is sound, {@code false} if not
    */
   public boolean validate() {
@@ -420,6 +443,7 @@ public class VelocityConfiguration implements ProxyConfig {
 
   /**
    * Reads the Velocity configuration from {@code path}.
+   *
    * @param path the path to read from
    * @return the deserialized Velocity configuration
    * @throws IOException if we could not read from the {@code path}.
@@ -467,23 +491,25 @@ public class VelocityConfiguration implements ProxyConfig {
       configVersion = 1.0;
     }
 
-    // Whether or not this config version is older than 2.0 which uses the deprecated "forwarding-secret" parameter
+    // Whether or not this config version is older than 2.0 which uses the deprecated
+    // "forwarding-secret" parameter
     boolean legacyConfig = configVersion < 2.0;
 
     String forwardingSecretString;
     byte[] forwardingSecret;
 
     // Handle the previous (version 1.0) config
-    // There is duplicate/old code here in effort to make the future commit which abandons legacy config handling
-    // easier to implement. All that would be required is removing the if statement here and keeping the contents
-    // of the else block (with slight tidying).
+    // There is duplicate/old code here in effort to make the future commit which abandons legacy
+    // config handling easier to implement. All that would be required is removing the if statement
+    // here and keeping the contents of the else block (with slight tidying).
     if (legacyConfig) {
-      logger.warn("You are currently using a deprecated configuration version. The \"forwarding-secret\""
-          + " parameter has been recognized as a security concern and has been removed in config version 2.0."
-          + " It's recommended you rename your current \"velocity.toml\" to something else to allow Velocity"
-          + " to generate a config file of the new version. You may then configure that file as you normally would."
-          + " The only differences are the config-version and \"forwarding-secret\" has been replaced"
-          + " by \"forwarding-secret-file\".");
+      logger.warn(
+          "You are currently using a deprecated configuration version. The \"forwarding-secret\""
+              + " parameter is a security hazard and was removed in config version 2.0."
+              + " You should rename your current \"velocity.toml\" to something else to allow"
+              + " Velocity to generate a config file for the new version. You may then configure "
+              + " that file as you normally would. The only differences are the config-version "
+              + "and \"forwarding-secret\" has been replaced by \"forwarding-secret-file\".");
 
       // Default legacy handling
       forwardingSecretString = System.getenv()
@@ -505,7 +531,8 @@ public class VelocityConfiguration implements ProxyConfig {
           if (Files.isRegularFile(secretPath)) {
             forwardingSecretString = String.join("", Files.readAllLines(secretPath));
           } else {
-            throw new RuntimeException("The file " + forwardSecretFile + " is not a valid file or it is a directory.");
+            throw new RuntimeException(
+                "The file " + forwardSecretFile + " is not a valid file or it is a directory.");
           }
         } else {
           throw new RuntimeException("The forwarding-secret-file does not exist.");
@@ -517,7 +544,7 @@ public class VelocityConfiguration implements ProxyConfig {
     if (configVersion == 1.0 || configVersion == 2.0) {
       config.set("force-key-authentication", config.getOrElse("force-key-authentication", true));
       config.setComment("force-key-authentication",
-              "Should the proxy enforce the new public key security standard? By default, this is on.");
+          "Should the proxy enforce the new public key security standard? By default, this is on.");
       config.set("config-version", configVersion == 2.0 ? "2.5" : "1.5");
       mustResave = true;
     }
@@ -648,12 +675,11 @@ public class VelocityConfiguration implements ProxyConfig {
     }
 
     /**
-     * TOML requires keys to match a regex of {@code [A-Za-z0-9_-]} unless it is wrapped in
-     * quotes; however, the TOML parser returns the key with the quotes so we need to clean the
-     * server name before we pass it onto server registration to keep proper server name behavior.
+     * TOML requires keys to match a regex of {@code [A-Za-z0-9_-]} unless it is wrapped in quotes;
+     * however, the TOML parser returns the key with the quotes so we need to clean the server name
+     * before we pass it onto server registration to keep proper server name behavior.
      *
      * @param name the server name to clean
-     *
      * @return the cleaned server name
      */
     private String cleanServerName(String name) {
@@ -721,19 +747,32 @@ public class VelocityConfiguration implements ProxyConfig {
 
   private static class Advanced {
 
-    @Expose private int compressionThreshold = 256;
-    @Expose private int compressionLevel = -1;
-    @Expose private int loginRatelimit = 3000;
-    @Expose private int connectionTimeout = 5000;
-    @Expose private int readTimeout = 30000;
-    @Expose private boolean proxyProtocol = false;
-    @Expose private boolean tcpFastOpen = false;
-    @Expose private boolean bungeePluginMessageChannel = true;
-    @Expose private boolean showPingRequests = false;
-    @Expose private boolean failoverOnUnexpectedServerDisconnect = true;
-    @Expose private boolean announceProxyCommands = true;
-    @Expose private boolean logCommandExecutions = false;
-    @Expose private boolean logPlayerConnections = true;
+    @Expose
+    private int compressionThreshold = 256;
+    @Expose
+    private int compressionLevel = -1;
+    @Expose
+    private int loginRatelimit = 3000;
+    @Expose
+    private int connectionTimeout = 5000;
+    @Expose
+    private int readTimeout = 30000;
+    @Expose
+    private boolean proxyProtocol = false;
+    @Expose
+    private boolean tcpFastOpen = false;
+    @Expose
+    private boolean bungeePluginMessageChannel = true;
+    @Expose
+    private boolean showPingRequests = false;
+    @Expose
+    private boolean failoverOnUnexpectedServerDisconnect = true;
+    @Expose
+    private boolean announceProxyCommands = true;
+    @Expose
+    private boolean logCommandExecutions = false;
+    @Expose
+    private boolean logPlayerConnections = true;
 
     private Advanced() {
     }
@@ -835,10 +874,14 @@ public class VelocityConfiguration implements ProxyConfig {
 
   private static class Query {
 
-    @Expose private boolean queryEnabled = false;
-    @Expose private int queryPort = 25577;
-    @Expose private String queryMap = "Velocity";
-    @Expose private boolean showPlugins = false;
+    @Expose
+    private boolean queryEnabled = false;
+    @Expose
+    private int queryPort = 25577;
+    @Expose
+    private String queryMap = "Velocity";
+    @Expose
+    private boolean showPlugins = false;
 
     private Query() {
     }
@@ -886,7 +929,11 @@ public class VelocityConfiguration implements ProxyConfig {
     }
   }
 
+  /**
+   * Configuration for metrics.
+   */
   public static class Metrics {
+
     private boolean enabled = true;
 
     private Metrics(CommentedConfig toml) {

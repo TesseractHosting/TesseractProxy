@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2023 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,23 @@
 
 package com.velocitypowered.proxy.connection.client;
 
+import static com.velocitypowered.api.proxy.ConnectionRequestBuilder.Status.ALREADY_CONNECTED;
+import static com.velocitypowered.proxy.connection.util.ConnectionRequestResults.plainResult;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.DisconnectEvent.LoginStatus;
-import com.velocitypowered.api.event.player.*;
+import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.KickedFromServerEvent.DisconnectPlayer;
 import com.velocitypowered.api.event.player.KickedFromServerEvent.Notify;
 import com.velocitypowered.api.event.player.KickedFromServerEvent.RedirectPlayer;
 import com.velocitypowered.api.event.player.KickedFromServerEvent.ServerKickResult;
+import com.velocitypowered.api.event.player.PlayerModInfoEvent;
+import com.velocitypowered.api.event.player.PlayerResourcePackStatusEvent;
+import com.velocitypowered.api.event.player.PlayerSettingsChangedEvent;
+import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.network.ProtocolVersion;
 import com.velocitypowered.api.permission.PermissionFunction;
 import com.velocitypowered.api.permission.PermissionProvider;
@@ -51,7 +59,12 @@ import com.velocitypowered.proxy.connection.util.ConnectionRequestResults.Impl;
 import com.velocitypowered.proxy.connection.util.VelocityInboundConnection;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
 import com.velocitypowered.proxy.protocol.StateRegistry;
-import com.velocitypowered.proxy.protocol.packet.*;
+import com.velocitypowered.proxy.protocol.packet.ClientSettings;
+import com.velocitypowered.proxy.protocol.packet.Disconnect;
+import com.velocitypowered.proxy.protocol.packet.HeaderAndFooter;
+import com.velocitypowered.proxy.protocol.packet.KeepAlive;
+import com.velocitypowered.proxy.protocol.packet.PluginMessage;
+import com.velocitypowered.proxy.protocol.packet.ResourcePackRequest;
 import com.velocitypowered.proxy.protocol.packet.chat.ChatQueue;
 import com.velocitypowered.proxy.protocol.packet.chat.ChatType;
 import com.velocitypowered.proxy.protocol.packet.chat.builder.ChatBuilderFactory;
@@ -67,6 +80,18 @@ import com.velocitypowered.proxy.util.DurationUtils;
 import com.velocitypowered.proxy.util.collect.CappedSet;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.identity.Identity;
@@ -92,26 +117,20 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
 
-import java.net.InetSocketAddress;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static com.velocitypowered.api.proxy.ConnectionRequestBuilder.Status.ALREADY_CONNECTED;
-import static com.velocitypowered.proxy.connection.util.ConnectionRequestResults.plainResult;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
+/**
+ * Represents a player that is connected to the proxy.
+ */
 public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, KeyIdentifiable,
     VelocityInboundConnection {
 
   private static final int MAX_PLUGIN_CHANNELS = 1024;
-  private static final PlainTextComponentSerializer PASS_THRU_TRANSLATE = PlainTextComponentSerializer.builder()
-      .flattener(ComponentFlattener.basic().toBuilder()
-          .mapper(KeybindComponent.class, c -> "")
-          .mapper(TranslatableComponent.class, TranslatableComponent::key)
-          .build())
-      .build();
+  private static final PlainTextComponentSerializer PASS_THRU_TRANSLATE =
+      PlainTextComponentSerializer.builder()
+          .flattener(ComponentFlattener.basic().toBuilder()
+              .mapper(KeybindComponent.class, c -> "")
+              .mapper(TranslatableComponent.class, TranslatableComponent::key)
+              .build())
+          .build();
   static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
 
   private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
@@ -158,7 +177,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   private final ChatBuilderFactory chatBuilderFactory;
 
   ConnectedPlayer(VelocityServer server, GameProfile profile, MinecraftConnection connection,
-                  @Nullable InetSocketAddress virtualHost, boolean onlineMode, @Nullable IdentifiedKey playerKey) {
+      @Nullable InetSocketAddress virtualHost, boolean onlineMode,
+      @Nullable IdentifiedKey playerKey) {
     this.server = server;
     this.profile = profile;
     this.connection = connection;
@@ -329,7 +349,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
 
   @Override
   public void sendMessage(@NonNull Identity identity, @NonNull Component message,
-                          @NonNull MessageType type) {
+      @NonNull MessageType type) {
     Preconditions.checkNotNull(message, "message");
     Preconditions.checkNotNull(type, "type");
 
@@ -501,7 +521,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   private ConnectionRequestBuilder createConnectionRequest(RegisteredServer server,
-                                                           @Nullable VelocityServerConnection previousConnection) {
+      @Nullable VelocityServerConnection previousConnection) {
     return new ConnectionRequestBuilderImpl(server, previousConnection);
   }
 
@@ -570,7 +590,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
    * @param safe      whether or not we can safely reconnect to a new server
    */
   public void handleConnectionException(RegisteredServer server, Throwable throwable,
-                                        boolean safe) {
+      boolean safe) {
     if (!isActive()) {
       // If the connection is no longer active, it makes no sense to try and recover it.
       return;
@@ -609,7 +629,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
    * @param safe       whether or not we can safely reconnect to a new server
    */
   public void handleConnectionException(RegisteredServer server, Disconnect disconnect,
-                                        boolean safe) {
+      boolean safe) {
     if (!isActive()) {
       // If the connection is no longer active, it makes no sense to try and recover it.
       return;
@@ -635,7 +655,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   private void handleConnectionException(RegisteredServer rs,
-                                         @Nullable Component kickReason, Component friendlyReason, boolean safe) {
+      @Nullable Component kickReason, Component friendlyReason, boolean safe) {
     if (!isActive()) {
       // If the connection is no longer active, it makes no sense to try and recover it.
       return;
@@ -668,7 +688,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   private void handleKickEvent(KickedFromServerEvent originalEvent, Component friendlyReason,
-                               boolean kickedFromCurrent) {
+      boolean kickedFromCurrent) {
     server.getEventManager().fire(originalEvent)
         .thenAcceptAsync(event -> {
           // There can't be any connection in flight now.
@@ -875,8 +895,10 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
 
   @Override
   public String toString() {
-    boolean isPlayerAddressLoggingEnabled = server.getConfiguration().isPlayerAddressLoggingEnabled();
-    String playerIp = isPlayerAddressLoggingEnabled ? getRemoteAddress().toString() : "<ip address withheld>";
+    boolean isPlayerAddressLoggingEnabled = server.getConfiguration()
+        .isPlayerAddressLoggingEnabled();
+    String playerIp =
+        isPlayerAddressLoggingEnabled ? getRemoteAddress().toString() : "<ip address withheld>";
     return "[connected player] " + profile.getName() + " (" + playerIp + ")";
   }
 
@@ -941,8 +963,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   /**
-   * Queues a resource-pack for sending to the player and sends it
-   * immediately if the queue is empty.
+   * Queues a resource-pack for sending to the player and sends it immediately if the queue is
+   * empty.
    */
   public void queueResourcePack(ResourcePackInfo info) {
     outstandingResourcePacks.add(info);
@@ -1046,9 +1068,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   /**
-   * Sends a {@link KeepAlive} packet to the player with a random ID.
-   * The response will be ignored by Velocity as it will not match the
-   * ID last sent by the server.
+   * Sends a {@link KeepAlive} packet to the player with a random ID. The response will be ignored
+   * by Velocity as it will not match the ID last sent by the server.
    */
   public void sendKeepAlive() {
     if (connection.getState() == StateRegistry.PLAY) {
@@ -1059,9 +1080,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   /**
-   * Gets the current "phase" of the connection, mostly used for tracking
-   * modded negotiation for legacy forge servers and provides methods
-   * for performing phase specific actions.
+   * Gets the current "phase" of the connection, mostly used for tracking modded negotiation for
+   * legacy forge servers and provides methods for performing phase specific actions.
    *
    * @return The {@link ClientConnectionPhase}
    */
@@ -1093,6 +1113,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   private class IdentityImpl implements Identity {
+
     @Override
     public @NonNull UUID uuid() {
       return ConnectedPlayer.this.getUniqueId();
@@ -1105,7 +1126,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
     private final @Nullable VelocityRegisteredServer previousServer;
 
     ConnectionRequestBuilderImpl(RegisteredServer toConnect,
-                                 @Nullable VelocityServerConnection previousConnection) {
+        @Nullable VelocityServerConnection previousConnection) {
       this.toConnect = Preconditions.checkNotNull(toConnect, "info");
       this.previousServer = previousConnection == null ? null : previousConnection.getServer();
     }

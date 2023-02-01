@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2023 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,6 @@
 
 package com.velocitypowered.proxy;
 
-import java.io.IOException;
-import java.util.Arrays;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -26,7 +24,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.io.IOException;
+import java.util.Arrays;
+
+/**
+ * Holds parsed command line options.
+ */
 public final class ProxyOptions {
+
   private static final Logger logger = LogManager.getLogger(ProxyOptions.class);
   private final boolean help;
   private final @Nullable Integer port;
@@ -37,7 +42,7 @@ public final class ProxyOptions {
     final OptionSpec<Void> help = parser.acceptsAll(Arrays.asList("h", "help"), "Print help")
         .forHelp();
     final OptionSpec<Integer> port = parser.acceptsAll(Arrays.asList("p", "port"),
-        "Specify the bind port to be used. The configuration bind port will be ignored.")
+            "Specify the bind port to be used. The configuration bind port will be ignored.")
         .withRequiredArg().ofType(Integer.class);
     final OptionSet set = parser.parse(args);
 

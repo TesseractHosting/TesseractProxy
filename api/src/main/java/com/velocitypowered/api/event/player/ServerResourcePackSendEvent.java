@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2023 Velocity Contributors & TropicalShadow
  *
  * The Velocity API is licensed under the terms of the MIT License. For more details,
  * reference the LICENSE file in the api top-level directory.
@@ -28,7 +28,7 @@ public class ServerResourcePackSendEvent implements ResultedEvent<ResultedEvent.
 
   /**
    * Constructs a new ServerResourcePackSendEvent.
-   * 
+   *
    * @param receivedResourcePack The resource pack the server sent.
    * @param serverConnection The connection this occurred on.
    */

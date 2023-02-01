@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors
+ * Copyright (C) 2023 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Exposes the tab list to plugins.
+ */
 public class KeyedVelocityTabList implements InternalTabList {
 
   protected final ConnectedPlayer player;
@@ -76,7 +79,8 @@ public class KeyedVelocityTabList implements InternalTabList {
 
     LegacyPlayerListItem.Item packetItem = LegacyPlayerListItem.Item.from(entry);
     connection.write(
-        new LegacyPlayerListItem(LegacyPlayerListItem.ADD_PLAYER, Collections.singletonList(packetItem)));
+        new LegacyPlayerListItem(LegacyPlayerListItem.ADD_PLAYER,
+            Collections.singletonList(packetItem)));
     entries.put(entry.getProfile().getId(), (KeyedVelocityTabListEntry) entry);
   }
 
@@ -88,7 +92,8 @@ public class KeyedVelocityTabList implements InternalTabList {
     if (entry != null) {
       LegacyPlayerListItem.Item packetItem = LegacyPlayerListItem.Item.from(entry);
       connection.write(
-          new LegacyPlayerListItem(LegacyPlayerListItem.REMOVE_PLAYER, Collections.singletonList(packetItem)));
+          new LegacyPlayerListItem(LegacyPlayerListItem.REMOVE_PLAYER,
+              Collections.singletonList(packetItem)));
     }
 
     return Optional.ofNullable(entry);
@@ -101,9 +106,9 @@ public class KeyedVelocityTabList implements InternalTabList {
   }
 
   /**
-   * Clears all entries from the tab list. Note that the entries are written with {@link
-   * MinecraftConnection#delayedWrite(Object)}, so make sure to do an explicit {@link
-   * MinecraftConnection#flush()}.
+   * Clears all entries from the tab list. Note that the entries are written with
+   * {@link MinecraftConnection#delayedWrite(Object)}, so make sure to do an explicit
+   * {@link MinecraftConnection#flush()}.
    */
   @Override
   public void clearAll() {
@@ -126,14 +131,15 @@ public class KeyedVelocityTabList implements InternalTabList {
 
   @Override
   public TabListEntry buildEntry(GameProfile profile,
-                                 net.kyori.adventure.text.@Nullable Component displayName,
-                                 int latency, int gameMode, @Nullable IdentifiedKey key) {
+      net.kyori.adventure.text.@Nullable Component displayName,
+      int latency, int gameMode, @Nullable IdentifiedKey key) {
     return new KeyedVelocityTabListEntry(this, profile, displayName, latency, gameMode, key);
   }
 
   @Override
-  public TabListEntry buildEntry(GameProfile profile, @Nullable Component displayName, int latency, int gameMode,
-                                 @Nullable ChatSession chatSession, boolean listed) {
+  public TabListEntry buildEntry(GameProfile profile, @Nullable Component displayName, int latency,
+      int gameMode,
+      @Nullable ChatSession chatSession, boolean listed) {
     return new KeyedVelocityTabListEntry(this, profile, displayName, latency, gameMode,
         chatSession == null ? null : chatSession.getIdentifiedKey());
   }
@@ -158,24 +164,6 @@ public class KeyedVelocityTabList implements InternalTabList {
           if (name == null || properties == null) {
             throw new IllegalStateException("Got null game profile for ADD_PLAYER");
           }
-          /* why are we verifying the key here - multi-proxy setups break this
-          // Verify key
-          IdentifiedKey providedKey = item.getPlayerKey();
-          Optional<Player> connected = proxyServer.getPlayer(uuid);
-          if (connected.isPresent()) {
-            IdentifiedKey expectedKey = connected.get().getIdentifiedKey();
-            if (providedKey != null) {
-              if (!Objects.equals(expectedKey, providedKey)) {
-                throw new IllegalStateException("Server provided incorrect player key in playerlist for "
-                    + name + " UUID: " + uuid);
-              }
-            } else {
-              // Substitute the key
-              // It shouldn't be propagated to remove the signature.
-              providedKey = expectedKey;
-            }
-          }
-           */
 
           entries.putIfAbsent(item.getUuid(), (KeyedVelocityTabListEntry) TabListEntry.builder()
               .tabList(this)
@@ -229,7 +217,8 @@ public class KeyedVelocityTabList implements InternalTabList {
       }
 
       if (selectedKey != null
-          && selectedKey.getKeyRevision().getApplicableTo().contains(connection.getProtocolVersion())
+          && selectedKey.getKeyRevision().getApplicableTo()
+          .contains(connection.getProtocolVersion())
           && Objects.equals(selectedKey.getSignatureHolder(), entry.getProfile().getId())) {
         packetItem.setPlayerKey(selectedKey);
       } else {

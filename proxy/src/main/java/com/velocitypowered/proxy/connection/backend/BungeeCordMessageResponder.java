@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2019-2023 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,18 +35,24 @@ import com.velocitypowered.proxy.server.VelocityRegisteredServer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import java.util.Optional;
+import java.util.StringJoiner;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.ComponentSerializer;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
-import java.util.Optional;
-import java.util.StringJoiner;
-
-@SuppressFBWarnings(value = "OS_OPEN_STREAM", justification = "Most methods in this class open "
-    + "instances of ByteBufDataOutput backed by heap-allocated ByteBufs. Closing them does "
-    + "nothing.")
+/**
+ * Handles messages coming from servers trying to communicate with the BungeeCord plugin
+ * messaging channel interface.
+ */
+@SuppressFBWarnings(
+    value = "OS_OPEN_STREAM",
+    justification = "Most methods in this class open "
+      + "instances of ByteBufDataOutput backed by heap-allocated ByteBufs. Closing them does "
+      + "nothing."
+)
 public class BungeeCordMessageResponder {
 
   private static final MinecraftChannelIdentifier MODERN_CHANNEL = MinecraftChannelIdentifier
