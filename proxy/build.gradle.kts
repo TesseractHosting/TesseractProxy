@@ -17,8 +17,8 @@ tasks {
 
     jar {
         manifest {
-            attributes["Implementation-Title"] = "Velocity"
-            attributes["Implementation-Vendor"] = "Velocity Contributors"
+            attributes["Implementation-Title"] = "TesseractProxy"
+            attributes["Implementation-Vendor"] = "TesseractProxy"
             attributes["Multi-Release"] = "true"
         }
     }
