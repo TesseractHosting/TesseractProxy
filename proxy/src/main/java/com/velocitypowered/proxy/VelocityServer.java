@@ -37,10 +37,7 @@ import com.velocitypowered.api.util.Favicon;
 import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.api.util.ProxyVersion;
 import com.velocitypowered.proxy.command.VelocityCommandManager;
-import com.velocitypowered.proxy.command.builtin.GlistCommand;
-import com.velocitypowered.proxy.command.builtin.ServerCommand;
-import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
-import com.velocitypowered.proxy.command.builtin.VelocityCommand;
+import com.velocitypowered.proxy.command.builtin.*;
 import com.velocitypowered.proxy.config.VelocityConfiguration;
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
@@ -67,30 +64,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.AccessController;
-import java.security.KeyPair;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.IntFunction;
-import java.util.stream.Collectors;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.audience.ForwardingAudience;
 import net.kyori.adventure.key.Key;
@@ -104,6 +77,20 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.AccessController;
+import java.security.KeyPair;
+import java.security.PrivilegedAction;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntFunction;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link ProxyServer}.
@@ -177,13 +164,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     String implVersion;
     String implVendor;
     if (pkg != null) {
-      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "Velocity");
+      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "TesseractPorxy");
       implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
-      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors");
+      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "TesseractPorxy Contributors");
     } else {
-      implName = "Velocity";
+      implName = "TesseractPorxy";
       implVersion = "<unknown>";
-      implVendor = "Velocity Contributors";
+      implVendor = "TesseractPorxy Contributors";
     }
 
     return new ProxyVersion(implName, implVendor, implVersion);
@@ -215,6 +202,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     commandManager.register("server", new ServerCommand(this));
     commandManager.register("shutdown", ShutdownCommand.command(this),
         "end", "stop");
+    commandManager.register("hub", new LobbyCommand(this));
+    commandManager.register("builder", new BuilderCommand(this));
+    commandManager.register("discord", new DiscordCommand(this));
+    commandManager.register("alert", new AlertCommand(this));
+    commandManager.register("send", new SendCommand(this));
     new GlistCommand(this).register();
 
     this.doStartupConfigLoad();
