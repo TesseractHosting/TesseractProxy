@@ -105,6 +105,11 @@ public class KeyedVelocityTabList implements InternalTabList {
     return entries.containsKey(uuid);
   }
 
+  @Override
+  public Optional<TabListEntry> getEntry(UUID uuid) {
+    return Optional.ofNullable(this.entries.get(uuid));
+  }
+
   /**
    * Clears all entries from the tab list. Note that the entries are written with
    * {@link MinecraftConnection#delayedWrite(Object)}, so make sure to do an explicit

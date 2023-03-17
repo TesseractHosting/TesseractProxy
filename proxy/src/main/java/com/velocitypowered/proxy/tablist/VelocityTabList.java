@@ -156,6 +156,11 @@ public class VelocityTabList implements InternalTabList {
   }
 
   @Override
+  public Optional<TabListEntry> getEntry(UUID uuid) {
+    return Optional.ofNullable(this.entries.get(uuid));
+  }
+
+  @Override
   public Collection<TabListEntry> getEntries() {
     return this.entries.values().stream().map(e -> (TabListEntry) e).collect(Collectors.toList());
   }
