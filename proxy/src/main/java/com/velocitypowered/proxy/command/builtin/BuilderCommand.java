@@ -22,13 +22,17 @@ import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
+import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+import com.velocitypowered.proxy.protocol.MinecraftPacket;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BuilderCommand implements SimpleCommand {
     private final ProxyServer server;
@@ -39,7 +43,7 @@ public class BuilderCommand implements SimpleCommand {
 
     @Override
     public void execute(Invocation invocation) {
-        Player source = (Player)invocation.source();
+        ConnectedPlayer source = (ConnectedPlayer)invocation.source();
         String[] args = invocation.arguments();
         String builderServer = this.server.getConfiguration().getBuilderServer();
         Optional<RegisteredServer> toConnect = this.server.getServer(builderServer);
@@ -47,6 +51,22 @@ public class BuilderCommand implements SimpleCommand {
             source.sendMessage(Component.text("Builder server is not online.",NamedTextColor.RED));
             return;
         }
+
+        AtomicBoolean isBuilder = new AtomicBoolean(false);
+        source.getCurrentServer().ifPresent( server -> isBuilder.set(server.getServer() == toConnect.get()));
+        if(isBuilder.get()){
+            String argsString = String.join(" ", args);
+            MinecraftPacket packet = source.getChatBuilderFactory().builder()
+                    .asPlayer(source)
+                    .message(("/builder " + argsString).strip())
+                    .setTimestamp(Instant.now())
+                    .toServer();
+
+            assert source.getConnection().getSessionHandler() != null;
+            source.getConnection().getSessionHandler().handleGeneric(packet);
+            return;
+        }
+
 
         source.sendMessage(Component.text("Connecting to builder server..."));
         source.createConnectionRequest(toConnect.get())
@@ -63,7 +83,7 @@ public class BuilderCommand implements SimpleCommand {
 
     @Override
     public List<String> suggest(Invocation invocation) {
-        return new ArrayList<String>();
+        return new ArrayList<>();
     }
 
     @Override

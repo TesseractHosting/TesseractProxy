@@ -10,7 +10,7 @@ val junitVersion: String by project.extra
 
 allprojects {
     group = "com.velocitypowered"
-    version = "3.2.1-SNAPSHOT"
+    version = "3.2.2-SNAPSHOT"
 }
 
 subprojects {
