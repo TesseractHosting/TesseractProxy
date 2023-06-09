@@ -34,7 +34,6 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import java.util.List;
 import java.util.Optional;
-import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
@@ -81,7 +80,7 @@ public class GlistCommand {
   private int totalCount(final CommandContext<CommandSource> context) {
     final CommandSource source = context.getSource();
     sendTotalProxyCount(source);
-    source.sendMessage(Identity.nil(),
+    source.sendMessage(
         Component.translatable("velocity.command.glist-view-all", NamedTextColor.YELLOW));
     return 1;
   }
@@ -97,7 +96,7 @@ public class GlistCommand {
     } else {
       Optional<RegisteredServer> registeredServer = server.getServer(serverName);
       if (!registeredServer.isPresent()) {
-        source.sendMessage(Identity.nil(),
+        source.sendMessage(
             CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(serverName)));
         return -1;
       }
@@ -137,6 +136,6 @@ public class GlistCommand {
       }
     }
 
-    target.sendMessage(Identity.nil(), builder.build());
+    target.sendMessage(builder.build());
   }
 }

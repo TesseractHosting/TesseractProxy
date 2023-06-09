@@ -37,7 +37,10 @@ import com.velocitypowered.api.util.Favicon;
 import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.api.util.ProxyVersion;
 import com.velocitypowered.proxy.command.VelocityCommandManager;
+import com.velocitypowered.proxy.command.builtin.AlertCommand;
+import com.velocitypowered.proxy.command.builtin.BuilderCommand;
 import com.velocitypowered.proxy.command.builtin.GlistCommand;
+import com.velocitypowered.proxy.command.builtin.SendCommand;
 import com.velocitypowered.proxy.command.builtin.ServerCommand;
 import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
 import com.velocitypowered.proxy.command.builtin.VelocityCommand;
@@ -177,13 +180,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     String implVersion;
     String implVendor;
     if (pkg != null) {
-      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "Velocity");
+      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "TesseractPorxy");
       implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
-      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors");
+      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(),
+          "TesseractPorxy Contributors");
     } else {
-      implName = "Velocity";
+      implName = "TesseractPorxy";
       implVersion = "<unknown>";
-      implVendor = "Velocity Contributors";
+      implVendor = "TesseractPorxy Contributors";
     }
 
     return new ProxyVersion(implName, implVendor, implVersion);
@@ -213,8 +217,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     // Initialize commands first
     commandManager.register("velocity", new VelocityCommand(this));
     commandManager.register("server", new ServerCommand(this));
-    commandManager.register("shutdown", ShutdownCommand.command(this),
-        "end", "stop");
+    commandManager.register("shutdown", ShutdownCommand.command(this));
+    commandManager.register("send", new SendCommand(this));
+    commandManager.register("builder", new BuilderCommand(this));
+    commandManager.register("alert", new AlertCommand(this));
     new GlistCommand(this).register();
 
     this.doStartupConfigLoad();
