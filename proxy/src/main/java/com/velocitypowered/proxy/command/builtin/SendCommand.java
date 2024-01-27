@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Velocity Contributors & TropicalShadow
+ * Copyright (C) 2020-2023 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,136 +17,145 @@
 
 package com.velocitypowered.proxy.command.builtin;
 
-import com.google.common.collect.ImmutableList;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.tree.ArgumentCommandNode;
+import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
-import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import com.velocitypowered.api.proxy.server.ServerInfo;
-import net.kyori.adventure.identity.Identity;
+import java.util.Objects;
+import java.util.Optional;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-public class SendCommand implements SimpleCommand {
-  public static final int MAX_SERVERS_TO_LIST = 50;
+/**
+ * Implements the Velocity default {@code /send} command.
+ */
+public class SendCommand {
   private final ProxyServer server;
+  private static final String SERVER_ARG = "server";
+  private static final String PLAYER_ARG = "player";
 
   public SendCommand(ProxyServer server) {
     this.server = server;
   }
 
-  @Override
-  public void execute(Invocation invocation) {
-    CommandSource source = invocation.source();
-    String[] args = invocation.arguments();
-    //Player player = (Player) source;
-    if (args.length >= 2) {
-      String playerNameOrAll = args[0];
-      Optional<Player> selectedPlayer = this.server.getPlayer(playerNameOrAll);
-      boolean all = playerNameOrAll.equalsIgnoreCase("all");
-      String serverName = args[1];
-      Optional<RegisteredServer> toConnect = this.server.getServer(serverName);
-      List<Player> selected;
-      if (selectedPlayer.isPresent()) {
-        selected = new ArrayList();
-        selected.add(selectedPlayer.get());
-      } else {
-        if (!all) {
-          source.sendMessage(
-                  Identity.nil(),
-                  CommandMessages.UNKNOWN_PLAYER.args(Component.text(playerNameOrAll)));
-          return;
+  /**
+   * Registers this command.
+   */
+  public void register() {
+    final LiteralArgumentBuilder<CommandSource> rootNode = BrigadierCommand
+        .literalArgumentBuilder("send")
+        .requires(source ->
+            source.getPermissionValue("velocity.command.send") == Tristate.TRUE)
+        .executes(this::usage);
+    final RequiredArgumentBuilder<CommandSource, String> playerNode = BrigadierCommand
+        .requiredArgumentBuilder(PLAYER_ARG, StringArgumentType.word())
+        .suggests((context, builder) -> {
+          final String argument = context.getArguments().containsKey(PLAYER_ARG)
+              ? context.getArgument(PLAYER_ARG, String.class)
+              : "";
+          for (final Player player : server.getAllPlayers()) {
+            final String playerName = player.getUsername();
+            if (playerName.regionMatches(true, 0, argument, 0, argument.length())) {
+              builder.suggest(playerName);
+            }
+          }
+          if ("all".regionMatches(true, 0, argument, 0, argument.length())) {
+            builder.suggest("all");
+          }
+          if ("current".regionMatches(true, 0, argument, 0, argument.length())
+              && context.getSource() instanceof Player) {
+            builder.suggest("current");
+          }
+          return builder.buildFuture();
+        })
+        .executes(this::usage);
+    final ArgumentCommandNode<CommandSource, String> serverNode = BrigadierCommand
+        .requiredArgumentBuilder(SERVER_ARG, StringArgumentType.word())
+        .suggests((context, builder) -> {
+          final String argument = context.getArguments().containsKey(SERVER_ARG)
+              ? context.getArgument(SERVER_ARG, String.class)
+              : "";
+          for (final RegisteredServer server : server.getAllServers()) {
+            final String serverName = server.getServerInfo().getName();
+            if (serverName.regionMatches(true, 0, argument, 0, argument.length())) {
+              builder.suggest(server.getServerInfo().getName());
+            }
+          }
+          return builder.buildFuture();
+        })
+        .executes(this::send)
+        .build();
+    playerNode.then(serverNode);
+    rootNode.then(playerNode.build());
+    server.getCommandManager().register(new BrigadierCommand(rootNode.build()));
+  }
+
+  private int usage(final CommandContext<CommandSource> context) {
+    context.getSource().sendMessage(
+        Component.translatable("velocity.command.send-usage", NamedTextColor.YELLOW)
+    );
+    return Command.SINGLE_SUCCESS;
+  }
+
+  private int send(final CommandContext<CommandSource> context) {
+    final String serverName = context.getArgument(SERVER_ARG, String.class);
+    final String player = context.getArgument(PLAYER_ARG, String.class);
+
+    final Optional<RegisteredServer> maybeServer = server.getServer(serverName);
+
+    if (maybeServer.isEmpty()) {
+      context.getSource().sendMessage(
+          CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(serverName))
+      );
+      return 0;
+    }
+
+    final RegisteredServer targetServer = maybeServer.get();
+
+    final Optional<Player> maybePlayer = server.getPlayer(player);
+    if (maybePlayer.isEmpty()
+        && !Objects.equals(player, "all")
+        && !Objects.equals(player, "current")) {
+      context.getSource().sendMessage(
+          CommandMessages.PLAYER_NOT_FOUND.args(Component.text(player))
+      );
+      return 0;
+    }
+
+    if (Objects.equals(player, "all")) {
+      for (final Player p : server.getAllPlayers()) {
+        p.createConnectionRequest(targetServer).fireAndForget();
+      }
+      return Command.SINGLE_SUCCESS;
+    }
+
+    if (Objects.equals(player, "current")) {
+      if (!(context.getSource() instanceof Player source)) {
+        context.getSource().sendMessage(CommandMessages.PLAYERS_ONLY);
+        return 0;
+      }
+
+      final Optional<ServerConnection> connectedServer = source.getCurrentServer();
+      if (connectedServer.isPresent()) {
+        for (final Player p : connectedServer.get().getServer().getPlayersConnected()) {
+          p.createConnectionRequest(maybeServer.get()).fireAndForget();
         }
-
-        selected = new ArrayList<>(this.server.getAllPlayers());
+        return Command.SINGLE_SUCCESS;
       }
-
-      if (toConnect.isEmpty()) {
-        source.sendMessage(
-                Identity.nil(),
-                CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(serverName)));
-        return;
-      }
-
-      selected.forEach((it) -> {
-        it.createConnectionRequest((RegisteredServer) toConnect.get()).fireAndForget();
-        it.sendMessage(Component.translatable("velocity.command.send-sent")
-                .args(Component.text(toConnect.get().getServerInfo().getName())));
-      });
-    } else {
-      this.outputServerInformation(source);
+      return 0;
     }
 
+    // The player at this point must be present
+    maybePlayer.orElseThrow().createConnectionRequest(targetServer).fireAndForget();
+    return Command.SINGLE_SUCCESS;
   }
-
-  private void outputServerInformation(CommandSource executor) {
-    if(executor instanceof Player){
-      String currentServer = ((Player)executor).getCurrentServer()
-              .map(ServerConnection::getServerInfo)
-              .map(ServerInfo::getName)
-              .orElse("<unknown>");
-      executor.sendMessage(
-              Identity.nil(),
-              Component.translatable(
-                      "velocity.command.server-current-server",
-                      NamedTextColor.YELLOW,
-                      Component.text(currentServer)));
-    }
-    List<RegisteredServer> servers = BuiltinCommandUtil.sortedServerList(this.server);
-    if (servers.size() > MAX_SERVERS_TO_LIST) {
-      executor.sendMessage(
-              Identity.nil(),
-              Component.translatable("velocity.command.server-too-many", NamedTextColor.RED));
-      return;
-    }
-    // Assemble the list of servers as components
-    TextComponent.Builder serverListBuilder = Component.text()
-            .append(Component.translatable("velocity.command.server-available",
-                    NamedTextColor.YELLOW))
-            .append(Component.space());
-    for (int i = 0; i < servers.size(); i++) {
-      RegisteredServer rs = servers.get(i);
-      serverListBuilder.append(Component.text(rs.getServerInfo().getName()));
-      if (i != servers.size() - 1) {
-        serverListBuilder.append(Component.text(", ", NamedTextColor.GRAY));
-      }
-    }
-
-    executor.sendMessage(Identity.nil(), serverListBuilder.build());
-  }
-
-
-  @Override
-  public List<String> suggest(Invocation invocation) {
-    String[] currentArgs = invocation.arguments();
-    List<String> playerList = this.server.getAllPlayers().stream().map((player) -> player.getGameProfile().getName()).collect(Collectors.toList());
-    playerList.add("all");
-    Stream<String> possibilities = playerList.stream();
-    Stream<String> possibleServers = this.server.getAllServers().stream().map((rs) -> {
-      return rs.getServerInfo().getName();
-    });
-    if (currentArgs.length == 0) {
-      return possibilities.collect(Collectors.toList());
-    } else if (currentArgs.length == 1) {
-      return (List<String>) possibilities.filter((name) -> name.regionMatches(true, 0, currentArgs[0], 0, currentArgs[0].length())).collect(Collectors.toList());
-    } else {
-      return (List<String>) (currentArgs.length == 2 ? (List) possibleServers.filter((name) -> name.regionMatches(true, 0, currentArgs[1], 0, currentArgs[1].length())).collect(Collectors.toList()) : ImmutableList.of());
-    }
-  }
-
-  @Override
-  public boolean hasPermission(Invocation invocation) {
-    return invocation.source().getPermissionValue("velocity.command.send") == Tristate.TRUE;
-  }
-
 }

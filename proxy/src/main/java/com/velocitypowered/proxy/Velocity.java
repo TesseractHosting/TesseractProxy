@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Velocity Contributors
+ * Copyright (C) 2018-2023 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,10 @@ package com.velocitypowered.proxy;
 
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
+import java.text.DecimalFormat;
+import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.text.DecimalFormat;
 
 /**
  * The main class. Responsible for parsing command line arguments and then launching the
@@ -64,14 +64,14 @@ public class Velocity {
       return;
     }
 
-    long startTime = System.currentTimeMillis();
+    long startTime = System.nanoTime();
 
     VelocityServer server = new VelocityServer(options);
     server.start();
     Runtime.getRuntime().addShutdownHook(new Thread(() -> server.shutdown(false),
         "Shutdown thread"));
 
-    double bootTime = (System.currentTimeMillis() - startTime) / 1000d;
+    double bootTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) / 1000d;
     logger.info("Done ({}s)!", new DecimalFormat("#.##").format(bootTime));
     server.getConsoleCommandSource().start();
 
